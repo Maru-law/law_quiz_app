@@ -93,3 +93,45 @@ button.disabled {
 #question-list a:hover {
   transform: translateY(-2px);
 }
+
+
+/* カテゴリ表示用のバッジスタイル */
+.category-badge {
+  display: inline-block;
+  background-color: #6c757d; /* ダークグレー */
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.9em;
+  margin-bottom: 12px;
+}
+
+/* 結果表示カードの背景色 */
+.result-card.correct {
+  background-color: #e9f7ec; /* 薄い緑 */
+  border-left: 5px solid var(--correct-color);
+}
+.result-card.incorrect {
+  background-color: #fdeeee; /* 薄い赤 */
+  border-left: 5px solid var(--incorrect-color);
+}
+
+/* 正誤根拠テキストのスタイル */
+#correctness-statement {
+  font-weight: bold;
+  font-size: 0.9em;
+  color: var(--dark-gray);
+  margin-top: -10px;
+  margin-bottom: 15px;
+}
+
+/* 問題一覧のカテゴリヘッダー */
+.category-header {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: var(--primary-color);
+  margin-top: 24px;
+  margin-bottom: 8px;
+  border-bottom: 2px solid var(--primary-color);
+  padding-bottom: 4px;
+}

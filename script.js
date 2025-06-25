@@ -3,7 +3,6 @@ const SPREADSHEET_URL = 'https://script.google.com/macros/s/AKfycbyALjRevzArTAVS
 
 // --- 共通の処理 ---
 document.addEventListener('DOMContentLoaded', () => {
-  // 現在のページが一覧ページ(list.html)か、問題ページ(index.html)かを判定
   if (document.getElementById('question-list')) {
     initListPage();
   } else if (document.getElementById('question-card')) {
@@ -11,8 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// スプレッドシートから全問題データを取得する関数
-// sessionStorageを使い、一度取得したらデータを保持して動作を軽くする
 async function fetchAllQuestions() {
   const cachedData = sessionStorage.getItem('quizData');
   if (cachedData) {
@@ -22,8 +19,10 @@ async function fetchAllQuestions() {
     const response = await fetch(SPREADSHEET_URL);
     if (!response.ok) throw new Error('データの取得に失敗しました');
     const data = await response.json();
-    sessionStorage.setItem('quizData', JSON.stringify(data)); // 取得したデータをキャッシュ
-    return data;
+    // 元のインデックスを各問題に付与しておく
+    const dataWithIndex = data.map((q, index) => ({ ...q, originalIndex: index }));
+    sessionStorage.setItem('quizData', JSON.stringify(dataWithIndex));
+    return dataWithIndex;
   } catch (error) {
     console.error(error);
     alert(error.message);
@@ -35,46 +34,84 @@ async function fetchAllQuestions() {
 async function initListPage() {
   const questionListEl = document.getElementById('question-list');
   const questions = await fetchAllQuestions();
+  
+  // カテゴリごとに問題をグループ化
+  const questionsByCategory = questions.reduce((acc, q) => {
+    const category = q.category || '未分類';
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(q);
+    return acc;
+  }, {});
 
-  if (questions.length > 0) {
-    questionListEl.innerHTML = ''; // 「読み込み中...」を消す
-    questions.forEach((q, index) => {
-      const link = document.createElement('a');
-      link.href = `index.html?q=${index}`; // 各問題へのリンクを作成
-      
-      // 問題文が長すぎる場合は省略
-      let displayText = q.question_true;
-      if (displayText.length > 50) {
-        displayText = displayText.substring(0, 50) + '...';
-      }
-      link.textContent = `問題 ${index + 1}: ${displayText}`;
-      questionListEl.appendChild(link);
-    });
+  if (Object.keys(questionsByCategory).length > 0) {
+    questionListEl.innerHTML = '';
+    for (const category in questionsByCategory) {
+      // カテゴリヘッダーを作成
+      const header = document.createElement('h2');
+      header.className = 'category-header';
+      header.textContent = category;
+      questionListEl.appendChild(header);
+
+      // カテゴリ内の問題をリスト表示
+      questionsByCategory[category].forEach(q => {
+        const link = document.createElement('a');
+        link.href = `index.html?q=${q.originalIndex}`;
+        link.textContent = q.title; // 表示を「title」に変更
+        questionListEl.appendChild(link);
+      });
+    }
   } else {
     questionListEl.innerHTML = '<p>問題の読み込みに失敗しました。</p>';
   }
 }
 
-
 // --- 問題回答ページの処理 ---
 let allQuestions = [];
 let currentQuestionIndex = 0;
-let isTrueQuestion = false; // 表示されている問題が正しい文章(true)か否か
+let isTrueQuestion = false;
+
+// 回答済みの問題インデックスを管理する
+function getAnsweredIndices() {
+  const answered = sessionStorage.getItem('answeredIndices');
+  return answered ? JSON.parse(answered) : [];
+}
+
+function markQuestionAsAnswered(index) {
+  const answered = getAnsweredIndices();
+  if (!answered.includes(index)) {
+    answered.push(index);
+    sessionStorage.setItem('answeredIndices', JSON.stringify(answered));
+  }
+}
 
 async function initQuestionPage() {
   allQuestions = await fetchAllQuestions();
   if (allQuestions.length === 0) return;
 
-  // URLパラメータから問題番号を取得 (例: index.html?q=2)
   const params = new URLSearchParams(window.location.search);
   const qIndex = parseInt(params.get('q'), 10);
-
-  // パラメータが有効な数値ならその問題へ、なければ最初の問題へ
-  currentQuestionIndex = !isNaN(qIndex) && qIndex >= 0 && qIndex < allQuestions.length ? qIndex : 0;
+  
+  // URLに指定があればその問題、なければランダムな未回答問題を開始
+  if (!isNaN(qIndex) && qIndex >= 0 && qIndex < allQuestions.length) {
+    currentQuestionIndex = qIndex;
+  } else {
+    // ランダムスタート
+    const answered = getAnsweredIndices();
+    const unanswered = allQuestions.filter(q => !answered.includes(q.originalIndex));
+    if (unanswered.length > 0) {
+      currentQuestionIndex = unanswered[Math.floor(Math.random() * unanswered.length)].originalIndex;
+    } else {
+      // 全問回答済みの場合
+      alert("すべての問題に回答済みです！お疲れ様でした。");
+      window.location.href = 'list.html';
+      return;
+    }
+  }
   
   loadQuestion(currentQuestionIndex);
   
-  // ボタンのイベントリスナーを設定
   document.getElementById('btn-true').addEventListener('click', () => handleAnswer(true));
   document.getElementById('btn-false').addEventListener('click', () => handleAnswer(false));
   document.getElementById('next-question-btn').addEventListener('click', loadNextQuestion);
@@ -83,71 +120,87 @@ async function initQuestionPage() {
   });
 }
 
-// 問題を読み込んで表示する関数
 function loadQuestion(index) {
-  // 画面をリセット
   resetState();
-
-  const question = allQuestions[index];
-  document.getElementById('question-number').textContent = `問題 ${index + 1}`;
+  const question = allQuestions.find(q => q.originalIndex === index);
+  if (!question) return;
   
-  // 50%の確率で正しい問題文か間違った問題文かを決める
+  currentQuestionIndex = index;
+  
+  document.getElementById('category-display').textContent = question.category;
+  document.getElementById('question-number').textContent = `問題 ${index + 1}`;
   isTrueQuestion = Math.random() < 0.5;
   document.getElementById('question-text').textContent = isTrueQuestion ? question.question_true : question.question_false;
 }
 
-// 回答ボタンが押された時の処理
 function handleAnswer(userAnswer) {
-  // 正解かどうかを判定
-  // (表示が正しい文 AND ユーザーが〇) OR (表示が間違い文 AND ユーザーが×)
+  const question = allQuestions.find(q => q.originalIndex === currentQuestionIndex);
+  markQuestionAsAnswered(currentQuestionIndex);
+
   const isCorrect = (isTrueQuestion && userAnswer) || (!isTrueQuestion && !userAnswer);
 
-  // 結果を表示
+  const resultCardEl = document.getElementById('result-card');
   const resultTextEl = document.getElementById('result-text');
+  const correctnessStatementEl = document.getElementById('correctness-statement');
+
+  resultCardEl.classList.remove('correct', 'incorrect');
   if (isCorrect) {
     resultTextEl.textContent = '正解！';
     resultTextEl.className = 'correct';
+    resultCardEl.classList.add('correct');
   } else {
     resultTextEl.textContent = '間違い';
     resultTextEl.className = 'incorrect';
+    resultCardEl.classList.add('incorrect');
   }
   
-  document.getElementById('explanation-text').textContent = allQuestions[currentQuestionIndex].explanation;
-  document.getElementById('result-card').style.display = 'block';
+  correctnessStatementEl.textContent = isTrueQuestion ? 'この文章は正しいです。' : 'この文章は誤っています。';
+  document.getElementById('explanation-text').textContent = question.explanation;
+  resultCardEl.style.display = 'block';
 
-  // ボタンの状態を更新
   document.getElementById('btn-true').disabled = true;
   document.getElementById('btn-false').disabled = true;
-  if (userAnswer) {
-    document.getElementById('btn-false').classList.add('disabled');
-  } else {
-    document.getElementById('btn-true').classList.add('disabled');
-  }
+  document.getElementById(userAnswer ? 'btn-false' : 'btn-true').classList.add('disabled');
+  
+  document.getElementById('nav-buttons').style.display = 'flex';
 
-  // ナビゲーションボタンを表示
-  const navButtons = document.getElementById('nav-buttons');
-  navButtons.style.display = 'flex';
-  // 最終問題なら「次の問題へ」ボタンを隠す
-  if (currentQuestionIndex >= allQuestions.length - 1) {
+  // 同じカテゴリ内で未回答の問題があるかチェック
+  const nextQuestion = findNextRandomQuestion();
+  if (!nextQuestion) {
     document.getElementById('next-question-btn').style.display = 'none';
   } else {
     document.getElementById('next-question-btn').style.display = 'block';
   }
 }
 
-// 次の問題を読み込む
-function loadNextQuestion() {
-  currentQuestionIndex++;
-  // URLを書き換えてリロードしなくても良いようにする
-  history.pushState(null, '', `?q=${currentQuestionIndex}`);
-  loadQuestion(currentQuestionIndex);
+// 同じカテゴリから、未回答の問題をランダムに探す
+function findNextRandomQuestion() {
+  const currentCategory = allQuestions.find(q => q.originalIndex === currentQuestionIndex).category;
+  const answered = getAnsweredIndices();
+  
+  const unansweredInCategory = allQuestions.filter(q => 
+    q.category === currentCategory && !answered.includes(q.originalIndex)
+  );
+
+  if (unansweredInCategory.length === 0) {
+    return null;
+  }
+  
+  const nextQuestion = unansweredInCategory[Math.floor(Math.random() * unansweredInCategory.length)];
+  return nextQuestion;
 }
 
-// 回答前の状態に画面を戻す
+function loadNextQuestion() {
+  const nextQuestion = findNextRandomQuestion();
+  if (nextQuestion) {
+    history.pushState(null, '', `?q=${nextQuestion.originalIndex}`);
+    loadQuestion(nextQuestion.originalIndex);
+  }
+}
+
 function resetState() {
   document.getElementById('result-card').style.display = 'none';
   document.getElementById('nav-buttons').style.display = 'none';
-  
   const btnTrue = document.getElementById('btn-true');
   const btnFalse = document.getElementById('btn-false');
   btnTrue.disabled = false;
