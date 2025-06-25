@@ -169,7 +169,10 @@ button.disabled {
 
 /* --- 問題ページのボタンを下部固定にする --- */
 
-#answer-buttons {
+/* --- 問題ページのボタンを下部固定にする --- */
+
+/* ボタン全体を囲むコンテナのスタイル */
+.bottom-bar {
   position: fixed; /* 画面に固定 */
   bottom: 0;
   left: 0;
@@ -180,12 +183,21 @@ button.disabled {
   padding: 16px;
   padding-bottom: calc(16px + env(safe-area-inset-bottom)); /* iPhoneのホームバーを避ける */
   box-shadow: 0 -2px 8px rgba(0,0,0,0.1); /* 上向きの影 */
-  margin-bottom: 0; /* 既存のmarginをリセット */
   border-top: 1px solid #eee;
+}
+
+/* 〇×ボタンのスタイルから固定配置に関する指定を削除 */
+#answer-buttons {
+  margin-bottom: 0; /* 既存のmarginをリセット */
+}
+
+/* #nav-buttonsは回答後に表示される */
+#nav-buttons {
+  margin-bottom: 16px; /* 〇×ボタンとの間に余白を設ける */
 }
 
 /* ボタン固定によるコンテンツの隠れを防ぐための余白 */
 body {
-  /* ボタンバーの高さ分だけ、ページ下部に余白を確保する */
-  padding-bottom: 120px; 
+  /* ボタンバーが高くなる可能性があるので、余白を増やす */
+  padding-bottom: 200px; 
 }
