@@ -29,22 +29,22 @@ async function fetchAllQuestions() {
   }
 }
 
-// ★★ 修正点 ★★
-// マークダウンの簡易変換（改行と箇条書きに対応）
 function markdownToHtml(text) {
   if (!text) return '';
   return text
-    .replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>') // 箇条書き
-    .replace(/<\/ul><ul>/g, '') // 連続するリストを結合
-    .replace(/\n/g, '<br>'); // 改行
+    .replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>')
+    .replace(/<\/ul><ul>/g, '')
+    .replace(/\n/g, '<br>');
 }
 
-
 // --- 問題一覧ページの処理 ---
-async function initListPage() {
-  // セッションをクリアして、常に最新の状態で始められるようにする
+function initListPage() {
+  // 問題一覧ページに来たら、回答履歴をリセットする
   sessionStorage.removeItem('answeredIndices');
+  displayQuestionList();
+}
 
+async function displayQuestionList() {
   const questionListEl = document.getElementById('question-list');
   const questions = await fetchAllQuestions();
   
@@ -79,7 +79,7 @@ async function initListPage() {
 
 // --- 問題回答ページの処理 ---
 let allQuestions = [];
-let currentQuestionIndex = 0;
+let currentQuestionIndex = -1; // 未設定状態
 let isTrueQuestion = false;
 
 function getAnsweredIndices() {
@@ -88,39 +88,35 @@ function getAnsweredIndices() {
 }
 
 function markQuestionAsAnswered(index) {
-  const answered = getAnsweredIndices();
+  let answered = getAnsweredIndices();
   if (!answered.includes(index)) {
     answered.push(index);
     sessionStorage.setItem('answeredIndices', JSON.stringify(answered));
   }
 }
 
+// ★★ ここが最重要修正ポイントです ★★
 async function initQuestionPage() {
   allQuestions = await fetchAllQuestions();
   if (allQuestions.length === 0) return;
 
   const params = new URLSearchParams(window.location.search);
   const qIndex = parseInt(params.get('q'), 10);
-  
-  // ★★ 修正点 ★★: 初期化ロジックを修正
-  let startingIndex;
+
+  // URLに有効な問題番号(?q=...)があるかチェック
   if (!isNaN(qIndex) && allQuestions.some(q => q.originalIndex === qIndex)) {
-    startingIndex = qIndex;
+    // URLで指定された問題から開始する場合
+    // これがセッションの開始なので、回答履歴をクリアする
+    sessionStorage.setItem('answeredIndices', JSON.stringify([]));
+    loadQuestion(qIndex);
   } else {
-    // URL指定がない、または無効な場合は、未回答の問題からランダムに選ぶ
-    const answered = getAnsweredIndices();
-    const unanswered = allQuestions.filter(q => !answered.includes(q.originalIndex));
-    if (unanswered.length > 0) {
-      startingIndex = unanswered[Math.floor(Math.random() * unanswered.length)].originalIndex;
-    } else {
-      alert("すべての問題に回答済みです！お疲れ様でした。");
-      window.location.href = 'list.html';
-      return;
-    }
+    // URLで問題が指定されていない場合は、一覧ページにリダイレクトする
+    alert('問題が指定されていません。一覧ページから問題を選択してください。');
+    window.location.href = 'list.html';
+    return;
   }
   
-  loadQuestion(startingIndex);
-  
+  // イベントリスナーの設定
   document.getElementById('btn-true').addEventListener('click', () => handleAnswer(true));
   document.getElementById('btn-false').addEventListener('click', () => handleAnswer(false));
   document.getElementById('next-question-btn').addEventListener('click', loadNextQuestion);
@@ -133,14 +129,13 @@ function loadQuestion(index) {
   resetState();
   const question = allQuestions.find(q => q.originalIndex === index);
   if (!question) {
-    alert('問題が見つかりません。一覧に戻ります。');
+    alert('問題の読み込みに失敗しました。一覧に戻ります。');
     window.location.href = 'list.html';
     return;
   }
   
-  currentQuestionIndex = index; // 現在の問題インデックスを正しく設定
+  currentQuestionIndex = index;
   
-  // ★★ 修正点 ★★: 問題番号の表示ロジックを変更
   const answeredCount = getAnsweredIndices().length;
   document.getElementById('question-number').textContent = `問題 ${answeredCount + 1}`;
   
@@ -150,9 +145,11 @@ function loadQuestion(index) {
 }
 
 function handleAnswer(userAnswer) {
-  const question = allQuestions.find(q => q.originalIndex === currentQuestionIndex);
+  // 回答する前に、現在の問題がまだ回答済みリストになければ追加する
+  // (ページをリロードして同じ問題に再回答した場合などに対応)
   markQuestionAsAnswered(currentQuestionIndex);
 
+  const question = allQuestions.find(q => q.originalIndex === currentQuestionIndex);
   const isCorrect = (isTrueQuestion && userAnswer) || (!isTrueQuestion && !userAnswer);
 
   const resultCardEl = document.getElementById('result-card');
@@ -169,7 +166,6 @@ function handleAnswer(userAnswer) {
     resultCardEl.classList.add('incorrect');
   }
   
-  // ★★ 修正点 ★★: マークダウンをHTMLに変換して表示
   document.getElementById('explanation-text').innerHTML = markdownToHtml(question.explanation);
   resultCardEl.style.display = 'block';
 
