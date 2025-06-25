@@ -1,5 +1,5 @@
 // Step1で取得したGASのウェブアプリURLをここに貼り付けます
-const SPREADSHEET_URL = 'https://script.google.com/macros/s/AKfycbyALjRevzArTAVSQ31umLSq9FVS1A2C2v4Z86fTaEllgxDYuGOf9umQBwlgaCJT2Liw/exec';
+const SPREADSHEET_URL = 'ここにGASのURLを貼り付け';
 
 // --- 共通の処理 ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -19,7 +19,6 @@ async function fetchAllQuestions() {
     const response = await fetch(SPREADSHEET_URL);
     if (!response.ok) throw new Error('データの取得に失敗しました');
     const data = await response.json();
-    // 元のインデックスを各問題に付与しておく
     const dataWithIndex = data.map((q, index) => ({ ...q, originalIndex: index }));
     sessionStorage.setItem('quizData', JSON.stringify(dataWithIndex));
     return dataWithIndex;
@@ -30,12 +29,25 @@ async function fetchAllQuestions() {
   }
 }
 
+// ★★ 修正点 ★★
+// マークダウンの簡易変換（改行と箇条書きに対応）
+function markdownToHtml(text) {
+  if (!text) return '';
+  return text
+    .replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>') // 箇条書き
+    .replace(/<\/ul><ul>/g, '') // 連続するリストを結合
+    .replace(/\n/g, '<br>'); // 改行
+}
+
+
 // --- 問題一覧ページの処理 ---
 async function initListPage() {
+  // セッションをクリアして、常に最新の状態で始められるようにする
+  sessionStorage.removeItem('answeredIndices');
+
   const questionListEl = document.getElementById('question-list');
   const questions = await fetchAllQuestions();
   
-  // カテゴリごとに問題をグループ化
   const questionsByCategory = questions.reduce((acc, q) => {
     const category = q.category || '未分類';
     if (!acc[category]) {
@@ -48,17 +60,15 @@ async function initListPage() {
   if (Object.keys(questionsByCategory).length > 0) {
     questionListEl.innerHTML = '';
     for (const category in questionsByCategory) {
-      // カテゴリヘッダーを作成
       const header = document.createElement('h2');
       header.className = 'category-header';
       header.textContent = category;
       questionListEl.appendChild(header);
 
-      // カテゴリ内の問題をリスト表示
       questionsByCategory[category].forEach(q => {
         const link = document.createElement('a');
         link.href = `index.html?q=${q.originalIndex}`;
-        link.textContent = q.title; // 表示を「title」に変更
+        link.textContent = q.title;
         questionListEl.appendChild(link);
       });
     }
@@ -72,7 +82,6 @@ let allQuestions = [];
 let currentQuestionIndex = 0;
 let isTrueQuestion = false;
 
-// 回答済みの問題インデックスを管理する
 function getAnsweredIndices() {
   const answered = sessionStorage.getItem('answeredIndices');
   return answered ? JSON.parse(answered) : [];
@@ -93,24 +102,24 @@ async function initQuestionPage() {
   const params = new URLSearchParams(window.location.search);
   const qIndex = parseInt(params.get('q'), 10);
   
-  // URLに指定があればその問題、なければランダムな未回答問題を開始
-  if (!isNaN(qIndex) && qIndex >= 0 && qIndex < allQuestions.length) {
-    currentQuestionIndex = qIndex;
+  // ★★ 修正点 ★★: 初期化ロジックを修正
+  let startingIndex;
+  if (!isNaN(qIndex) && allQuestions.some(q => q.originalIndex === qIndex)) {
+    startingIndex = qIndex;
   } else {
-    // ランダムスタート
+    // URL指定がない、または無効な場合は、未回答の問題からランダムに選ぶ
     const answered = getAnsweredIndices();
     const unanswered = allQuestions.filter(q => !answered.includes(q.originalIndex));
     if (unanswered.length > 0) {
-      currentQuestionIndex = unanswered[Math.floor(Math.random() * unanswered.length)].originalIndex;
+      startingIndex = unanswered[Math.floor(Math.random() * unanswered.length)].originalIndex;
     } else {
-      // 全問回答済みの場合
       alert("すべての問題に回答済みです！お疲れ様でした。");
       window.location.href = 'list.html';
       return;
     }
   }
   
-  loadQuestion(currentQuestionIndex);
+  loadQuestion(startingIndex);
   
   document.getElementById('btn-true').addEventListener('click', () => handleAnswer(true));
   document.getElementById('btn-false').addEventListener('click', () => handleAnswer(false));
@@ -123,12 +132,19 @@ async function initQuestionPage() {
 function loadQuestion(index) {
   resetState();
   const question = allQuestions.find(q => q.originalIndex === index);
-  if (!question) return;
+  if (!question) {
+    alert('問題が見つかりません。一覧に戻ります。');
+    window.location.href = 'list.html';
+    return;
+  }
   
-  currentQuestionIndex = index;
+  currentQuestionIndex = index; // 現在の問題インデックスを正しく設定
   
-  document.getElementById('category-display').textContent = question.category;
-  document.getElementById('question-number').textContent = `問題 ${index + 1}`;
+  // ★★ 修正点 ★★: 問題番号の表示ロジックを変更
+  const answeredCount = getAnsweredIndices().length;
+  document.getElementById('question-number').textContent = `問題 ${answeredCount + 1}`;
+  
+  document.getElementById('category-text').textContent = question.category;
   isTrueQuestion = Math.random() < 0.5;
   document.getElementById('question-text').textContent = isTrueQuestion ? question.question_true : question.question_false;
 }
@@ -141,7 +157,6 @@ function handleAnswer(userAnswer) {
 
   const resultCardEl = document.getElementById('result-card');
   const resultTextEl = document.getElementById('result-text');
-  const correctnessStatementEl = document.getElementById('correctness-statement');
 
   resultCardEl.classList.remove('correct', 'incorrect');
   if (isCorrect) {
@@ -154,8 +169,8 @@ function handleAnswer(userAnswer) {
     resultCardEl.classList.add('incorrect');
   }
   
-  correctnessStatementEl.textContent = isTrueQuestion ? 'この文章は正しいです。' : 'この文章は誤っています。';
-  document.getElementById('explanation-text').textContent = question.explanation;
+  // ★★ 修正点 ★★: マークダウンをHTMLに変換して表示
+  document.getElementById('explanation-text').innerHTML = markdownToHtml(question.explanation);
   resultCardEl.style.display = 'block';
 
   document.getElementById('btn-true').disabled = true;
@@ -164,7 +179,6 @@ function handleAnswer(userAnswer) {
   
   document.getElementById('nav-buttons').style.display = 'flex';
 
-  // 同じカテゴリ内で未回答の問題があるかチェック
   const nextQuestion = findNextRandomQuestion();
   if (!nextQuestion) {
     document.getElementById('next-question-btn').style.display = 'none';
@@ -173,9 +187,11 @@ function handleAnswer(userAnswer) {
   }
 }
 
-// 同じカテゴリから、未回答の問題をランダムに探す
 function findNextRandomQuestion() {
-  const currentCategory = allQuestions.find(q => q.originalIndex === currentQuestionIndex).category;
+  const currentQuestion = allQuestions.find(q => q.originalIndex === currentQuestionIndex);
+  if (!currentQuestion) return null;
+
+  const currentCategory = currentQuestion.category;
   const answered = getAnsweredIndices();
   
   const unansweredInCategory = allQuestions.filter(q => 
@@ -186,8 +202,7 @@ function findNextRandomQuestion() {
     return null;
   }
   
-  const nextQuestion = unansweredInCategory[Math.floor(Math.random() * unansweredInCategory.length)];
-  return nextQuestion;
+  return unansweredInCategory[Math.floor(Math.random() * unansweredInCategory.length)];
 }
 
 function loadNextQuestion() {

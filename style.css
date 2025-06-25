@@ -95,17 +95,6 @@ button.disabled {
 }
 
 
-/* カテゴリ表示用のバッジスタイル */
-.category-badge {
-  display: inline-block;
-  background-color: #6c757d; /* ダークグレー */
-  color: white;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 0.9em;
-  margin-bottom: 12px;
-}
-
 /* 結果表示カードの背景色 */
 .result-card.correct {
   background-color: #e9f7ec; /* 薄い緑 */
@@ -134,4 +123,46 @@ button.disabled {
   margin-bottom: 8px;
   border-bottom: 2px solid var(--primary-color);
   padding-bottom: 4px;
+}
+
+
+/* 結果表示カードの修正（左の線を削除）*/
+.result-card.correct {
+  background-color: #e9f7ec; /* 薄い緑 */
+}
+.result-card.incorrect {
+  background-color: #fdeeee; /* 薄い赤 */
+}
+/* 以前の border-left は不要なので削除 */
+
+/* 解説文を左揃えにする */
+#explanation-text {
+  text-align: left;
+  white-space: pre-wrap; /* 改行を反映させるため */
+}
+
+/* 箇条書き（ul, li）のスタイル */
+#explanation-text ul {
+  padding-left: 20px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+/* カテゴリ表示の新しいスタイル */
+.category-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.category-bar {
+  display: inline-block;
+  width: 4px;
+  height: 20px;
+  background-color: #007bff; /* 青色 */
+  margin-right: 8px;
+  border-radius: 2px;
+}
+#category-text {
+  font-weight: bold;
+  color: #333;
 }
