@@ -1,0 +1,95 @@
+:root {
+  --primary-color: #007bff;
+  --correct-color: #28a745;
+  --incorrect-color: #dc3545;
+  --light-gray: #f8f9fa;
+  --dark-gray: #6c757d;
+  --text-color: #212529;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--light-gray);
+  color: var(--text-color);
+  margin: 0;
+  padding: 16px;
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.card {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.question-number {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: var(--primary-color);
+  margin-bottom: 10px;
+}
+
+.button-group {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+button {
+  flex-grow: 1;
+  font-size: 1.5em;
+  font-weight: bold;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--dark-gray);
+  background-color: white;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+#btn-true { border-color: var(--primary-color); color: var(--primary-color); }
+#btn-false { border-color: var(--incorrect-color); color: var(--incorrect-color); }
+
+button.disabled {
+  background-color: #e9ecef;
+  color: var(--dark-gray);
+  border-color: #ced4da;
+  cursor: not-allowed;
+}
+
+.result-card {
+  text-align: center;
+}
+#result-text.correct { color: var(--correct-color); }
+#result-text.incorrect { color: var(--incorrect-color); }
+
+#nav-buttons button {
+  font-size: 1em;
+  padding: 12px;
+}
+#back-to-list-btn { background-color: var(--dark-gray); color: white; border: none; }
+#next-question-btn { background-color: var(--primary-color); color: white; border: none; }
+
+
+/* 問題一覧ページ用 */
+#question-list a {
+  display: block;
+  background-color: white;
+  padding: 16px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--text-color);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  transition: transform 0.2s;
+}
+#question-list a:hover {
+  transform: translateY(-2px);
+}

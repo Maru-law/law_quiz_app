@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>問題</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="container">
+    <div id="question-card" class="card">
+      <div id="question-number" class="question-number"></div>
+      <p id="question-text"></p>
+    </div>
+
+    <div id="answer-buttons" class="button-group">
+      <button id="btn-true">〇</button>
+      <button id="btn-false">×</button>
+    </div>
+
+    <div id="result-card" class="card result-card" style="display: none;">
+      <h2 id="result-text"></h2>
+      <p id="explanation-text"></p>
+    </div>
+
+    <div id="nav-buttons" class="button-group" style="display: none;">
+      <button id="next-question-btn">次の問題へ</button>
+      <button id="back-to-list-btn">問題一覧へ</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
