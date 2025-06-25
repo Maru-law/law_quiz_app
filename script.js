@@ -1,5 +1,4 @@
-// Step1で取得したGASのウェブアプリURLをここに貼り付けます
-const SPREADSHEET_URL = 'ここにGASのURLを貼り付け';
+const SPREADSHEET_URL = 'https://script.google.com/macros/s/AKfycbyALjRevzArTAVSQ31umLSq9FVS1A2C2v4Z86fTaEllgxDYuGOf9umQBwlgaCJT2Liw/exec';
 
 // --- 共通の処理 ---
 document.addEventListener('DOMContentLoaded', () => {
