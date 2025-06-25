@@ -31,9 +31,10 @@ async function fetchAllQuestions() {
 function markdownToHtml(text) {
   if (!text) return '';
   return text
-    .replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>')
-    .replace(/<\/ul><ul>/g, '')
-    .replace(/\n/g, '<br>');
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // 太字を追加
+    .replace(/^\* (.*$)/gim, '<ul><li>$1</li></ul>') // 箇条書き
+    .replace(/<\/ul><ul>/g, '') // 連続するリストを結合
+    .replace(/\n/g, '<br>'); // 改行
 }
 
 // --- 問題一覧ページの処理 ---
