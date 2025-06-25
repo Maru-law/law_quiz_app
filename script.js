@@ -1,4 +1,5 @@
-const SPREADSHEET_URL = 'https://script.google.com/macros/s/AKfycbyALjRevzArTAVSQ31umLSq9FVS1A2C2v4Z86fTaEllgxDYuGOf9umQBwlgaCJT2Liw/exec';
+// Step1で取得したGASのウェブアプリURLをここに貼り付けます
+const SPREADSHEET_URL = 'ここにGASのURLを貼り付け';
 
 // --- 共通の処理 ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -37,6 +38,7 @@ function markdownToHtml(text) {
     .replace(/\n/g, '<br>'); // 改行
 }
 
+
 // --- 問題一覧ページの処理 ---
 function initListPage() {
   // 問題一覧ページに来たら、回答履歴をリセットする
@@ -68,7 +70,7 @@ async function displayQuestionList() {
       questionsByCategory[category].forEach(q => {
         const link = document.createElement('a');
         link.href = `index.html?q=${q.originalIndex}`;
-        link.textContent = q.title;
+        link.innerHTML = markdownToHtml(q.title); 
         questionListEl.appendChild(link);
       });
     }
@@ -95,7 +97,6 @@ function markQuestionAsAnswered(index) {
   }
 }
 
-// ★★ ここが最重要修正ポイントです ★★
 async function initQuestionPage() {
   allQuestions = await fetchAllQuestions();
   if (allQuestions.length === 0) return;
@@ -141,12 +142,12 @@ function loadQuestion(index) {
   
   document.getElementById('category-text').textContent = question.category;
   isTrueQuestion = Math.random() < 0.5;
-  document.getElementById('question-text').textContent = isTrueQuestion ? question.question_true : question.question_false;
+  const questionText = isTrueQuestion ? question.question_true : question.question_false;
+  document.getElementById('question-text').innerHTML = markdownToHtml(questionText);
 }
 
 function handleAnswer(userAnswer) {
   // 回答する前に、現在の問題がまだ回答済みリストになければ追加する
-  // (ページをリロードして同じ問題に再回答した場合などに対応)
   markQuestionAsAnswered(currentQuestionIndex);
 
   const question = allQuestions.find(q => q.originalIndex === currentQuestionIndex);
@@ -157,7 +158,7 @@ function handleAnswer(userAnswer) {
 
   resultCardEl.classList.remove('correct', 'incorrect');
   if (isCorrect) {
-    resultTextEl.textContent = '正解！';
+    resultTextEl.textContent = '正解';
     resultTextEl.className = 'correct';
     resultCardEl.classList.add('correct');
   } else {

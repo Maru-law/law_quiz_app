@@ -14,6 +14,8 @@ body {
   margin: 0;
   padding: 16px;
   line-height: 1.6;
+  /* ボタンバーが高くなるため、余白を大きく確保 */
+  padding-bottom: 200px; 
 }
 
 .container {
@@ -39,7 +41,6 @@ body {
 .button-group {
   display: flex;
   gap: 16px;
-  margin-bottom: 20px;
 }
 
 button {
@@ -77,7 +78,6 @@ button.disabled {
 #back-to-list-btn { background-color: var(--dark-gray); color: white; border: none; }
 #next-question-btn { background-color: var(--primary-color); color: white; border: none; }
 
-
 /* 問題一覧ページ用 */
 #question-list a {
   display: block;
@@ -94,27 +94,6 @@ button.disabled {
   transform: translateY(-2px);
 }
 
-
-/* 結果表示カードの背景色 */
-.result-card.correct {
-  background-color: #e9f7ec; /* 薄い緑 */
-  border-left: 5px solid var(--correct-color);
-}
-.result-card.incorrect {
-  background-color: #fdeeee; /* 薄い赤 */
-  border-left: 5px solid var(--incorrect-color);
-}
-
-/* 正誤根拠テキストのスタイル */
-#correctness-statement {
-  font-weight: bold;
-  font-size: 0.9em;
-  color: var(--dark-gray);
-  margin-top: -10px;
-  margin-bottom: 15px;
-}
-
-/* 問題一覧のカテゴリヘッダー */
 .category-header {
   font-size: 1.2em;
   font-weight: bold;
@@ -125,15 +104,13 @@ button.disabled {
   padding-bottom: 4px;
 }
 
-
-/* 結果表示カードの修正（左の線を削除）*/
+/* 結果表示カードの背景色 */
 .result-card.correct {
   background-color: #e9f7ec; /* 薄い緑 */
 }
 .result-card.incorrect {
   background-color: #fdeeee; /* 薄い赤 */
 }
-/* 以前の border-left は不要なので削除 */
 
 /* 解説文を左揃えにする */
 #explanation-text {
@@ -167,10 +144,8 @@ button.disabled {
   color: #333;
 }
 
-/* --- 問題ページのボタンを下部固定にする --- */
-
-/* 〇×ボタンのスタイルに、再度position: fixedを設定 */
-#answer-buttons {
+/* ボタン全体を囲むコンテナのスタイル */
+.bottom-bar {
   position: fixed; /* 画面に固定 */
   bottom: 0;
   left: 0;
@@ -182,16 +157,14 @@ button.disabled {
   padding-bottom: calc(16px + env(safe-area-inset-bottom)); /* iPhoneのホームバーを避ける */
   box-shadow: 0 -2px 8px rgba(0,0,0,0.1); /* 上向きの影 */
   border-top: 1px solid #eee;
-  margin-bottom: 0;
 }
 
-/* ナビゲーションボタンは通常の要素としてページ末尾に表示される */
+/* 〇×ボタンのスタイルから固定配置に関する指定を削除 */
+#answer-buttons {
+  margin-bottom: 0; /* 既存のmarginをリセット */
+}
+
+/* #nav-buttonsは回答後に表示される */
 #nav-buttons {
-  margin-top: 20px; /* 結果表示カードとの間に余白を設ける */
-}
-
-/* ボタン固定によるコンテンツの隠れを防ぐための余白 */
-body {
-  /* 〇×ボタンバーの高さ分だけ、ページ下部に余白を確保する */
-  padding-bottom: 120px; 
+  margin-bottom: 16px; /* 〇×ボタンとの間に余白を設ける */
 }
